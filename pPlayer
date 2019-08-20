@@ -1,0 +1,27 @@
+import cv2
+import os
+import glob
+
+class pPlayer():
+    __file_ext = "*.JPG"
+    
+    def __init__(self, f_path = None):
+        if  not f_path:
+            self.f_path = os.getcwd()
+        else:
+            self.f_path = f_path
+
+    def find_images(self):
+        self.f_list = os.listdir(self.f_path)
+        self.imgs = glob.glob(pPlayer.__file_ext)
+        self.imgs = sorted(self.imgs)
+        return self.imgs
+
+    def start_video(self,v_fps):
+        for i in self.imgs:
+            img = cv2.imread(self.f_path+'\\'+i)
+            cv2.imshow('pPlayer', img)
+            cv2.waitKey(v_fps)
+    
+        
+
