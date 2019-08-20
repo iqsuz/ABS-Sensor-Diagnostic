@@ -1,0 +1,17 @@
+#'http://admin:admin@169.254.210.212:80/channel2'
+
+import cv2
+import time
+
+class RecordFromIP():
+    def __init__(self, url):
+        self.url = url
+
+    def record(self, r_file):
+        cap = cv2.VideoCapture(self.url)
+        for i in range(100):
+            ret, frame = cap.read()
+            cv2.imwrite(str(i)+'.jpg',frame)
+            time.sleep(0.1)
+
+        
