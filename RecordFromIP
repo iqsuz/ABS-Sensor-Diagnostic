@@ -2,16 +2,38 @@
 
 import cv2
 import time
+import timeit
 
 class RecordFromIP():
-    def __init__(self, url):
-        self.url = url
+    def __init__(self, protocol = None, user = None,
+                 password = None, IP = None, port = None, rest = None):
+        if not (protocol and user and password and IP and port and rest):
+            self.url = "http://admin:admin@169.254.210.212:80/channel2"
+        else:
+            self.protocol = str(protocol)
+            self.user = str(user)
+            self.password = str(password)
+            self.IP = str(IP)
+            self.port = str(port)
+            self.rest = str(rest)
+            self.sep = '//'
 
-    def record(self, r_file):
+            self.url = self.protocol + ':' + self.sep + self.user + ':' + self.password + '@' + self.IP + ':' + self.port + '/' + self.rest
+
+    #folder should be added to function.
+    def record(self, fps, folder):
         cap = cv2.VideoCapture(self.url)
-        for i in range(100):
+        c_time = time.time()
+        while 1:
+            tic = timeit.default_timer()
             ret, frame = cap.read()
-            cv2.imwrite(str(i)+'.jpg',frame)
-            time.sleep(0.1)
+            cv2.imwrite(str(c_time)+'.jpg',frame)
+            toc = timeit.default_timer()
+            if (toc-tic) < fps:
+                time.sleep(fps - (toc - tic))
+                c_time = c_time + fps
+            else:
+                c_time = c_time + (toc - tic)
+            
 
         
