@@ -18,22 +18,18 @@
 
 /* 
 ===============================================================
-							### How to use this function ###
+	### How to use this function ###
 ===============================================================
-This function is to set external interrupt for RR Hub bearing signal.
-RR hub bearing will produce signal which is 5V or GND.
-In every changing system will go into to this function to understan DC motor rotation value.
+This function is used to set external interrupt for start button.
+When button that is connected to GPIOA pin 0 is pressed, microprocessor goes interrupt routine where program continues to initialize variables and other functions.
 
 Interrupt hardware configurations
 	GPIOA is being used.
 	Pin is 0.
-	
 ***Trigger edge is rising for default.
 */
-/*
-	Fuction has been changed from ABS signal interrupt to button control to start program.
-*/
-void RHBE_InitEdgeInterrupt(void){
+
+void RHBE_InitButtonInterrupt(void){
 	//Definations
 	GPIO_InitTypeDef GPIO_Config;
 	EXTI_InitTypeDef EXTI_Config;
@@ -82,7 +78,7 @@ void RHBE_InitLED(void)
 
 /* 
 ===============================================================
-							### How to use this function ###
+### How to use this function ###
 ===============================================================
 This function can be used to produce PWM by using GPIOA's 1. pin.
 Function is using TIM5 to produce PWM.
@@ -156,12 +152,12 @@ void RHBE_SetPWMDutyCycle(uint8_t cycle)
 }
 /*
 ===============================================================
-							### How to use this function ###
+### How to use this function ###
 ===============================================================
-This function make enable TIM4 for encoder counting.
-Function will set two channel of TIM4 for encoder A and encoder B.
-Encoder A will be plug in to GPIOB's 6th pin.
-Encoder B will be plug in to GPIOB's 7th pin.
+This function enables TIM4 for encoder counter.
+Function will set Timer channels as encoder counter.
+Encoder A will be connected to GPIOB's 6th pin.
+Encoder B will be connected to GPIOB's 7th pin.
 TIM4 will count in every edge of signal of A and B.
 
 Interrupt hardware configurations
@@ -171,35 +167,37 @@ Interrupt hardware configurations
 
 void RHBE_InitEncoder(void)
 {
+	//Created GPIO struct.
 	GPIO_InitTypeDef GPIO_Config;
 	
+	//enabled clock source for GPIOB, TIM4
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
-	
-	GPIO_Config.GPIO_Mode = GPIO_Mode_AF;
-	GPIO_Config.GPIO_PuPd = GPIO_PuPd_UP;
-	GPIO_Config.GPIO_Pin = GPIO_Pin_6;
-	GPIO_Init(GPIOB, &GPIO_Config);
-	
-	GPIO_Config.GPIO_Pin = GPIO_Pin_7;
-	GPIO_Init(GPIOB, &GPIO_Config);
-	
-	GPIO_PinAFConfig(GPIOB,GPIO_PinSource6, GPIO_AF_TIM4);
-	GPIO_PinAFConfig(GPIOB,GPIO_PinSource7, GPIO_AF_TIM4);
-	
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);
 	
+	//GPIO settings to for Timer Channels
+	GPIO_Config.GPIO_Mode = GPIO_Mode_AF;
+	GPIO_Config.GPIO_PuPd = GPIO_PuPd_UP;
+	GPIO_Config.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
+	GPIO_Init(GPIOB, &GPIO_Config);
+	
+	//Pins are connected to AF.
+	GPIO_PinAFConfig(GPIOB,GPIO_PinSource6, GPIO_AF_TIM4);
+	GPIO_PinAFConfig(GPIOB,GPIO_PinSource7, GPIO_AF_TIM4);
+
+	//Timer was set as an two channel counter.
 	TIM_EncoderInterfaceConfig (TIM4, TIM_EncoderMode_TI12, 
                               TIM_ICPolarity_Rising, 
                               TIM_ICPolarity_Rising);
-  TIM_SetAutoreload (TIM4, 0xffff);
+  	TIM_SetAutoreload (TIM4, 0xffff);
 	
+	//Timer is being ran with above settings.
 	TIM_Cmd(TIM4,ENABLE);
 
 }
 
 /*
 ===============================================================
-							### How to use this function ###
+### How to use this function ###
 ===============================================================
 This function is to update edge selection of interrupt of ABS sensor signal by using EXTI_TriggerTypeDef.
 */
@@ -255,7 +253,7 @@ void RHBE_InitFirstTimer(void)
 }
 /* 
 ===============================================================
-							### How to use this function ###
+### How to use this function ###
 ===============================================================
 This function is to set external interrupt for RR Hub bearing signal.
 RR hub bearing will produce signal which is 5V or GND.
@@ -275,7 +273,7 @@ void RHBE_InitABSSignalInterrupt(void)
 	EXTI_InitTypeDef EXTI_Config;
 	NVIC_InitTypeDef NVIC_Config;
 	
-	//Giving energy to GPIOA and EXTI buses.
+	//Enabled clock signal for GPIOB and SYSCFG
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
 	
@@ -286,7 +284,7 @@ void RHBE_InitABSSignalInterrupt(void)
 	GPIO_Config.GPIO_Speed = GPIO_Speed_100MHz;
 	GPIO_Init(GPIOB,&GPIO_Config);
 	
-	//GPIOA's 0. pin has been assigned for external interrupt.
+	//GPIOB's 1. pin has been assigned for external interrupt.
 	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB,EXTI_PinSource1);
 
 	//Configuration of external interrupt.
@@ -302,9 +300,11 @@ void RHBE_InitABSSignalInterrupt(void)
 	NVIC_Init(&NVIC_Config);
 	
 }
+
+
 /* 
 ===============================================================
-							### How to use this function ###
+### How to use this function ###
 ===============================================================
 This function is to initilaze USART 2 for serial communication.
 
@@ -315,12 +315,15 @@ This function is to initilaze USART 2 for serial communication.
 
 void RHBE_InitUSART(void)
 {
+	//Declared Init structs.
 	USART_InitTypeDef USART_InitStruct;
 	GPIO_InitTypeDef GPIO_InitStruct;
 	
+	//Enabled clock sources for USART2 and GPIOA.
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
 	
+	//USART will be initialized based on below settings.
 	USART_InitStruct.USART_BaudRate = 115200;
 	USART_InitStruct.USART_WordLength = USART_WordLength_8b;
 	USART_InitStruct.USART_StopBits = USART_StopBits_1;
@@ -328,9 +331,11 @@ void RHBE_InitUSART(void)
 	USART_InitStruct.USART_Mode = USART_Mode_Tx;
 	USART_InitStruct.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
 	
+	//Usart is being ran with above settings.
 	USART_Init(USART2,&USART_InitStruct);
 	USART_Cmd(USART2, ENABLE);
 	
+	//USART pin has been arranged as AF.
 	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
 	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3;
 	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_100MHz;
