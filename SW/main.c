@@ -2,16 +2,18 @@
 #include "RHBE.h"
 
 volatile static isControlStruct isControl;
-uint8_t i,j;
+uint8_t counterMotorRotate, counterABSPulse;
 
 int main(){
+	//Variables is set initial values.
 	isControl.isButton = FALSE;
 	isControl.isMotorRotateEnough = FALSE;
 	isControl.isComplete = FALSE;
-	i = 0;
-	j = 0;
+	counterMotorRotate = 0;
+	counterABSPulse = 0;
 	
-	RHBE_InitEdgeInterrupt();
+	//Button, LED and USART is set.
+	RHBE_InitButtonInterrupt();
 	RHBE_InitLED();
 	RHBE_InitUSART();
 	USART_SendString(USART2, "Program Started\r\n");
@@ -20,33 +22,38 @@ int main(){
 		while(!isControl.isButton);
 		while(!isControl.isMotorRotateEnough);
 		while(!isControl.isComplete);
-		
 	}
 }
 
+/*
+This interrupt function controls start button. It will set up configuration after button is pressed.
+*/
 void EXTI0_IRQHandler(){
-	if(EXTI_GetITStatus(EXTI_Line0) == 1){
-		//isControl.isButton = TRUE;
-		USART_SendString(USART2, "Butona basildi.\r\n");
+	if(EXTI_GetITStatus(EXTI_Line0) == 1){ //Which interrupts flag was set?
+		USART_SendString(USART2, "Motor has been started.\r\n");
 		
-		RHBE_InitPWM();
-		RHBE_InitFirstTimer();
-		USART_SendString(USART2, "PWM Init.\r\nTimer Init\r\n");
+		RHBE_InitPWM(); //Motor started spinning.
+		RHBE_SetPWMDutyCycle(50);  //Duty Cycle was set %50.
 		
-		RHBE_SetPWMDutyCycle(50);
-		USART_SendString(USART2, "Motor was started.\r\n");
+		RHBE_InitFirstTimer(); //Timer has been set to calculate sufficent motor spinning.
 		
-		EXTI_ClearITPendingBit(EXTI_Line0);	
+		USART_SendString(USART2, "PWM Init.\r\nTimer Init\r\n"); //User has been informed.
+		
+		EXTI_ClearITPendingBit(EXTI_Line0); //Cleaning interrupt flag.	
 	}
 }
 
+
+/*
+This interrupt function determines whether motor is spinned enough or not?
+*/
 void TIM2_IRQHandler(){
 	if (TIM_GetITStatus(TIM2, TIM_IT_Update)){
-		i++;
+		counterMotorRotate++;
 		
-		if(i >= 5){
+		if(counterMotorRotate >= 5){  //After some time motor will reach desired speed.
 			TIM_Cmd(TIM2, DISABLE);
-			isControl.isMotorRotateEnough = TRUE; // Deger program sonunda FALSE yap1lmal1!!!
+			isControl.isMotorRotateEnough = TRUE; // Value should be False end of program.
 			USART_SendString(USART2, "Motor has been rotated enough.\r\n");
 			
 			RHBE_InitABSSignalInterrupt();
@@ -54,26 +61,31 @@ void TIM2_IRQHandler(){
 			
 			USART_SendString(USART2, "Encoder Init.\r\n");
 			RHBE_InitEncoder();
-			TIM_SetCounter(TIM4, 0);
+			TIM_SetCounter(TIM4, 0);  //Encoder counter is set to 0.
 			
-			i = 0;
+			counterMotorRotate = 0;
 		}
 		
-		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);  //Cleaning interrupt flag.
 	}
 
 }
 
+
+/*
+This interrupt function is triggered by ABS signal ouput.
+When ABS complete one pulse, this function will be executed.
+*/
 void EXTI1_IRQHandler(){
 	uint32_t Encoder;
 	
-	if(EXTI_GetITStatus(EXTI_Line1) == 1){
-		Encoder = TIM_GetCounter(TIM4);
-		TIM_SetCounter(TIM4, 0);
-		j++;
+	if(EXTI_GetITStatus(EXTI_Line1) == 1){ 
+		Encoder = TIM_GetCounter(TIM4); //Get the encoder value between two pulse.
+		TIM_SetCounter(TIM4, 0); // Prepare timer counter for next pulse measurement.
+		counterABSPulse++;
 
-		if(j <= 200){
-			if(Encoder > 72 && Encoder < 56){
+		if(counterABSPulse <= 96){
+			if(Encoder > 72 && Encoder < 56){  //if encoder counting exceed our limits throw an error and notify user as Not OK.
 				RHBE_SetPWMDutyCycle(1);
 				
 				isControl.isComplete = TRUE;
@@ -83,23 +95,22 @@ void EXTI1_IRQHandler(){
 				
 				USART_SendString(USART2, "NG");
 				
-				j = 0;
+				counterABSPulse = 0;
 			}
-			
-			if(j == 200){
-				RHBE_SetPWMDutyCycle(1);
+			else { // if there is not problem in one revolution, that means part is OK.
+				RHBE_SetPWMDutyCycle(0); //Stop motor.
 				
 				isControl.isResult = TRUE;
 				isControl.isComplete = TRUE;
 				isControl.isButton = FALSE;
 				isControl.isMotorRotateEnough = FALSE;
 				
-				USART_SendString(USART2, "OK");
+				USART_SendString(USART2, "OK");  //Notify user.
 				
-				j = 0;
+				counterABSPulse = 0;
 			}
 		}
 		
-		EXTI_ClearITPendingBit(EXTI_Line1);	
+		EXTI_ClearITPendingBit(EXTI_Line1);	//cleaning interrupt flag.
 	}
 }
