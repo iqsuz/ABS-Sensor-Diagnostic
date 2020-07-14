@@ -20,7 +20,7 @@
 	}isControlStruct;
 	
 
-	void RHBE_InitEdgeInterrupt(void);
+	void RHBE_InitButtonInterrupt(void);
 	void RHBE_InitLED(void);
 	void RHBE_InitPWM(void);
 	void RHBE_SetPWMDutyCycle(uint8_t cycle);
